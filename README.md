@@ -6,7 +6,6 @@ It keeps the useful parts of a coding agent:
 - file access
 - shell execution
 - persistent sessions
-- skills
 - custom extensions
 
 But it biases the runtime toward general research work:
@@ -45,7 +44,7 @@ npm run start
 ```
 
 Feynman uses Pi under the hood, but the user-facing entrypoint is `feynman`, not `pi`.
-When you run `feynman`, it launches the real Pi interactive TUI with Feynman's research extensions, skills, prompts, package stack, memory snapshot, and branded defaults preloaded.
+When you run `feynman`, it launches the real Pi interactive TUI with Feynman's research extensions, prompt templates, package stack, memory snapshot, and branded defaults preloaded.
 
 Most users should not need slash commands. The intended default is:
 - ask naturally
@@ -62,21 +61,16 @@ Inside the REPL:
 - `/alpha-status` checks alphaXiv auth
 - `/new` starts a new persisted session
 - `/exit` quits
-- `/lit <topic>` expands the literature-review prompt template
-- `/related <topic>` builds the related-work and justification view
-- `/review <artifact>` simulates a peer review for an AI research artifact
-- `/ablate <artifact>` designs the minimum convincing ablation set
-- `/rebuttal <artifact>` drafts a rebuttal and revision matrix
-- `/replicate <paper or claim>` expands the replication prompt template
-- `/reading <topic>` expands the reading-list prompt template
-- `/memo <topic>` expands the general research memo prompt template
 - `/deepresearch <topic>` runs a thorough source-heavy investigation workflow
-- `/autoresearch <idea>` expands the end-to-end idea-to-paper prompt template
-- `/compare <topic>` expands the source comparison prompt template
+- `/lit <topic>` expands the literature-review prompt template
+- `/review <artifact>` simulates a peer review for an AI research artifact
 - `/audit <item>` expands the paper/code audit prompt template
+- `/replicate <paper or claim>` expands the replication prompt template
 - `/draft <topic>` expands the paper-style writing prompt template
-- `/log` writes a durable session log to `notes/`
+- `/compare <topic>` expands the source comparison prompt template
+- `/autoresearch <idea>` expands the autonomous experiment loop
 - `/watch <topic>` schedules or prepares a recurring research watch
+- `/log` writes a durable session log to `notes/`
 - `/jobs` inspects active background work
 
 Package-powered workflows inside the REPL:
@@ -90,7 +84,7 @@ Package-powered workflows inside the REPL:
 
 Outside the REPL:
 
-- `feynman setup` runs the full guided setup for model auth, alpha login, Pi web, and preview deps
+- `feynman setup` runs the guided setup for model auth, alpha login, Pi web access, and preview deps
 - `feynman model login <provider>` logs into a Pi OAuth model provider from the outer Feynman CLI
 - `feynman --alpha-login` signs in to alphaXiv
 - `feynman --alpha-status` checks alphaXiv auth
@@ -99,21 +93,19 @@ Outside the REPL:
 
 ## Web Search Routing
 
-Feynman now treats web search as a small provider subsystem instead of a one-off prompt.
-The current Pi web stack underneath supports three runtime routes:
+Feynman v1 keeps web access simple: it uses the bundled `pi-web-access` package directly instead of maintaining a second Feynman-owned provider layer.
+
+The Pi web stack underneath supports three runtime routes:
 
 - `auto` — prefer Perplexity when configured, otherwise fall back to Gemini
 - `perplexity` — force Perplexity Sonar
 - `gemini` — force Gemini
 
-Feynman exposes those through four user-facing choices in `feynman setup web`, but defaults to Pi web through `Gemini Browser` when nothing explicit is configured:
+By default, the expected path is zero-config Gemini Browser via a signed-in Chromium profile. Advanced users can edit `~/.pi/web-search.json` directly if they want Gemini API keys, Perplexity keys, or a different route.
 
-- `Auto`
-- `Perplexity API`
-- `Gemini API`
-- `Gemini Browser`
+Useful commands:
 
-`Gemini Browser` is still the same Pi web-access path under the hood: it forces the Gemini route and expects a signed-in Chromium profile rather than an API key.
+- `feynman search status` — show the active Pi web-access route and config path
 
 ## Custom Tools
 
@@ -131,11 +123,9 @@ The starter extension adds:
 Feynman also ships bundled research subagents in `.pi/agents/`:
 
 - `researcher` for evidence gathering
-- `verifier` for claim and source checking
 - `reviewer` for peer-review style criticism
 - `writer` for polished memo and draft writing
-- `review` chain for gather → verify → peer review
-- `auto` chain for plan → gather → verify → draft
+- `citation` for inline citations and source verification
 
 Feynman uses `@companion-ai/alpha-hub` directly in-process rather than shelling out to the CLI.
 
@@ -144,6 +134,7 @@ Feynman uses `@companion-ai/alpha-hub` directly in-process rather than shelling 
 Feynman loads a lean research stack from [.pi/settings.json](/Users/advaitpaliwal/Companion/Code/feynman/.pi/settings.json):
 
 - `pi-subagents` for parallel literature gathering and decomposition
+- `pi-btw` for fast side-thread /btw conversations without interrupting the main run
 - `pi-docparser` for PDFs, Office docs, spreadsheets, and images
 - `pi-web-access` for broader web, GitHub, PDF, and media access
 - `pi-markdown-preview` for polished Markdown and LaTeX-heavy research writeups
@@ -166,6 +157,5 @@ feynman/
 ├── extensions/   # Custom research tools
 ├── papers/       # Polished paper-style drafts and writeups
 ├── prompts/      # Slash-style prompt templates
-├── skills/       # Research workflows
 └── src/          # Branded launcher around the embedded Pi TUI
 ```

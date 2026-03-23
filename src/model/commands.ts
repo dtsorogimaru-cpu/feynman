@@ -6,20 +6,10 @@ import { promptChoice, promptText } from "../setup/prompts.js";
 import { printInfo, printSection, printSuccess, printWarning } from "../ui/terminal.js";
 import {
 	buildModelStatusSnapshotFromRecords,
-	chooseRecommendedModel,
 	getAvailableModelRecords,
 	getSupportedModelRecords,
 	type ModelStatusSnapshot,
 } from "./catalog.js";
-
-function formatProviderSummaryLine(status: ModelStatusSnapshot["providers"][number]): string {
-	const state = status.configured ? `${status.availableModels} authenticated` : "not authenticated";
-	const flags = [
-		status.current ? "current" : undefined,
-		status.recommended ? "recommended" : undefined,
-	].filter(Boolean);
-	return `${status.label}: ${state}, ${status.supportedModels} supported${flags.length > 0 ? ` (${flags.join(", ")})` : ""}`;
-}
 
 function collectModelStatus(settingsPath: string, authPath: string): ModelStatusSnapshot {
 	return buildModelStatusSnapshotFromRecords(
@@ -94,50 +84,6 @@ export function getCurrentModelSpec(settingsPath: string): string | undefined {
 	return undefined;
 }
 
-export function printModelStatus(settingsPath: string, authPath: string): void {
-	const status = collectModelStatus(settingsPath, authPath);
-
-	printInfo(`Current default model: ${status.current ?? "not set"}`);
-	printInfo(`Current default valid: ${status.currentValid ? "yes" : "no"}`);
-	printInfo(`Authenticated models: ${status.availableModels.length}`);
-	printInfo(`Providers with auth: ${status.providers.filter((provider) => provider.configured).length}`);
-	printInfo(`Research recommendation: ${status.recommended ?? "none available"}`);
-	if (status.recommendationReason) {
-		printInfo(`Recommendation reason: ${status.recommendationReason}`);
-	}
-
-	if (status.providers.length > 0) {
-		printSection("Providers");
-		for (const provider of status.providers) {
-			printInfo(formatProviderSummaryLine(provider));
-		}
-	}
-
-	if (status.guidance.length > 0) {
-		printSection("Next Steps");
-		for (const line of status.guidance) {
-			printWarning(line);
-		}
-	}
-}
-
-export function printModelProviders(settingsPath: string, authPath: string): void {
-	const status = collectModelStatus(settingsPath, authPath);
-	for (const provider of status.providers) {
-		printInfo(formatProviderSummaryLine(provider));
-	}
-	const oauthProviders = getOAuthProviders(authPath);
-	if (oauthProviders.length > 0) {
-		printSection("OAuth Login");
-		for (const provider of oauthProviders) {
-			printInfo(`${provider.id} — ${provider.name ?? provider.id}`);
-		}
-	}
-	if (status.providers.length === 0) {
-		printWarning("No Pi model providers are visible in the current runtime.");
-	}
-}
-
 export function printModelList(settingsPath: string, authPath: string): void {
 	const status = collectModelStatus(settingsPath, authPath);
 	if (status.availableModels.length === 0) {
@@ -161,18 +107,6 @@ export function printModelList(settingsPath: string, authPath: string): void {
 		].filter(Boolean);
 		printInfo(`${spec}${markers.length > 0 ? ` (${markers.join(", ")})` : ""}`);
 	}
-}
-
-export function printModelRecommendation(authPath: string): void {
-	const recommendation = chooseRecommendedModel(authPath);
-	if (!recommendation) {
-		printWarning("No authenticated Pi models are available to recommend.");
-		printInfo("Run `feynman model login <provider>` or add provider credentials that Pi can see, then rerun this command.");
-		return;
-	}
-
-	printSuccess(`Recommended model: ${recommendation.spec}`);
-	printInfo(recommendation.reason);
 }
 
 export async function loginModelProvider(authPath: string, providerId?: string): Promise<void> {

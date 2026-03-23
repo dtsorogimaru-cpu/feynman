@@ -1,12 +1,7 @@
 import { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 import { getUserName as getAlphaUserName, isLoggedIn as isAlphaLoggedIn } from "@companion-ai/alpha-hub/lib";
 
-import {
-	FEYNMAN_CONFIG_PATH,
-	formatWebSearchDoctorLines,
-	getWebSearchStatus,
-	loadFeynmanConfig,
-} from "../config/feynman-config.js";
+import { formatPiWebAccessDoctorLines, getPiWebAccessStatus } from "../pi/web-access.js";
 import { BROWSER_FALLBACK_PATHS, PANDOC_FALLBACK_PATHS, resolveExecutable } from "../system/executables.js";
 import { readJson } from "../pi/settings.js";
 import { validatePiInstallation } from "../pi/runtime.js";
@@ -32,11 +27,9 @@ export type FeynmanStatusSnapshot = {
 	modelGuidance: string[];
 	alphaLoggedIn: boolean;
 	alphaUser?: string;
-	webProviderLabel: string;
-	webConfigured: boolean;
+	webRouteLabel: string;
 	previewConfigured: boolean;
 	sessionDir: string;
-	configPath: string;
 	pandocReady: boolean;
 	browserReady: boolean;
 	piReady: boolean;
@@ -44,11 +37,10 @@ export type FeynmanStatusSnapshot = {
 };
 
 export function collectStatusSnapshot(options: DoctorOptions): FeynmanStatusSnapshot {
-	const config = loadFeynmanConfig();
 	const pandocPath = resolveExecutable("pandoc", PANDOC_FALLBACK_PATHS);
 	const browserPath = process.env.PUPPETEER_EXECUTABLE_PATH ?? resolveExecutable("google-chrome", BROWSER_FALLBACK_PATHS);
 	const missingPiBits = validatePiInstallation(options.appRoot);
-	const webStatus = getWebSearchStatus(config.webSearch ?? {});
+	const webStatus = getPiWebAccessStatus();
 	const modelStatus = buildModelStatusSnapshotFromRecords(
 		getSupportedModelRecords(options.authPath),
 		getAvailableModelRecords(options.authPath),
@@ -65,11 +57,9 @@ export function collectStatusSnapshot(options: DoctorOptions): FeynmanStatusSnap
 		modelGuidance: modelStatus.guidance,
 		alphaLoggedIn: isAlphaLoggedIn(),
 		alphaUser: isAlphaLoggedIn() ? getAlphaUserName() ?? undefined : undefined,
-		webProviderLabel: webStatus.selected.label,
-		webConfigured: webStatus.perplexityConfigured || webStatus.geminiApiConfigured || webStatus.selected.id === "gemini-browser",
-		previewConfigured: Boolean(config.preview?.lastSetupAt),
+		webRouteLabel: webStatus.routeLabel,
+		previewConfigured: Boolean(pandocPath),
 		sessionDir: options.sessionDir,
-		configPath: FEYNMAN_CONFIG_PATH,
 		pandocReady: Boolean(pandocPath),
 		browserReady: Boolean(browserPath),
 		piReady: missingPiBits.length === 0,
@@ -89,11 +79,10 @@ export function runStatus(options: DoctorOptions): void {
 	printInfo(`Authenticated providers: ${snapshot.authenticatedProviderCount}`);
 	printInfo(`Recommended model: ${snapshot.recommendedModel ?? "not available"}`);
 	printInfo(`alphaXiv: ${snapshot.alphaLoggedIn ? snapshot.alphaUser ?? "configured" : "not configured"}`);
-	printInfo(`Web research: ${snapshot.webConfigured ? snapshot.webProviderLabel : "not configured"}`);
+	printInfo(`Web access: pi-web-access (${snapshot.webRouteLabel})`);
 	printInfo(`Preview: ${snapshot.previewConfigured ? "configured" : "not configured"}`);
 
 	printSection("Paths");
-	printInfo(`Config: ${snapshot.configPath}`);
 	printInfo(`Sessions: ${snapshot.sessionDir}`);
 
 	printSection("Runtime");
@@ -115,7 +104,6 @@ export function runStatus(options: DoctorOptions): void {
 
 export function runDoctor(options: DoctorOptions): void {
 	const settings = readJson(options.settingsPath);
-	const config = loadFeynmanConfig();
 	const modelRegistry = new ModelRegistry(AuthStorage.create(options.authPath));
 	const availableModels = modelRegistry.getAvailable();
 	const pandocPath = resolveExecutable("pandoc", PANDOC_FALLBACK_PATHS);
@@ -127,7 +115,6 @@ export function runDoctor(options: DoctorOptions): void {
 	]);
 	console.log(`working dir: ${options.workingDir}`);
 	console.log(`session dir: ${options.sessionDir}`);
-	console.log(`config path: ${FEYNMAN_CONFIG_PATH}`);
 	console.log("");
 	console.log(`alphaXiv auth: ${isAlphaLoggedIn() ? "ok" : "missing"}`);
 	if (isAlphaLoggedIn()) {
@@ -159,8 +146,7 @@ export function runDoctor(options: DoctorOptions): void {
 	}
 	console.log(`pandoc: ${pandocPath ?? "missing"}`);
 	console.log(`browser preview runtime: ${browserPath ?? "missing"}`);
-	console.log(`configured session dir: ${config.sessionDir ?? "not set"}`);
-	for (const line of formatWebSearchDoctorLines(config.webSearch ?? {})) {
+	for (const line of formatPiWebAccessDoctorLines()) {
 		console.log(line);
 	}
 	console.log(`quiet startup: ${settings.quietStartup === true ? "enabled" : "disabled"}`);

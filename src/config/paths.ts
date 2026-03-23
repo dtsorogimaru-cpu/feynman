@@ -22,10 +22,6 @@ export function getDefaultSessionDir(home = getFeynmanHome()): string {
 	return resolve(home, "sessions");
 }
 
-export function getFeynmanConfigPath(home = getFeynmanHome()): string {
-	return resolve(home, "config.json");
-}
-
 export function getBootstrapStatePath(home = getFeynmanHome()): string {
 	return resolve(getFeynmanStateDir(home), "bootstrap.json");
 }

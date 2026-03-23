@@ -4,11 +4,7 @@ description: Plan or execute a replication workflow for a paper, claim, or bench
 Design a replication plan for: $@
 
 Requirements:
-- Use the `subagent` tool for decomposition when the replication needs separate planning, evidence extraction, and execution passes.
-- Identify the canonical paper or source material first.
-- Use `alpha_get_paper` for the target paper.
-- Use `alpha_ask_paper` to extract the exact implementation or evaluation details you still need.
-- If the paper links code, inspect it with `alpha_read_code`.
+- Use the `researcher` subagent to extract implementation details from the target paper and any linked code.
 - Determine what code, datasets, metrics, and environment are needed.
 - If enough information is available locally, implement and run the replication steps.
 - Save notes, scripts, and results to disk in a reproducible layout.

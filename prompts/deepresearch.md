@@ -1,34 +1,107 @@
 ---
-description: Run a thorough, source-heavy investigation on a topic and produce a durable research brief with explicit evidence and source links.
+description: Run a thorough, source-heavy investigation on a topic and produce a durable research brief with inline citations.
 ---
 Run a deep research workflow for: $@
 
-Requirements:
-- Treat `/deepresearch` as one coherent Feynman workflow from the user's perspective. Do not expose internal orchestration primitives unless the user explicitly asks.
-- Start as the lead researcher. First make a compact plan: what must be answered, what evidence types are needed, and which sub-questions are worth splitting out.
-- Stay single-agent by default for narrow topics. Only use `subagent` when the task is broad enough that separate context windows materially improve breadth or speed.
-- If you use subagents, launch them as one worker batch around clearly disjoint sub-questions. Wait for the batch to finish, synthesize the results, and only then decide whether a second batch is needed.
-- Prefer breadth-first worker batches for deep research: different market segments, different source types, different time periods, different technical angles, or different competing explanations.
-- Use `researcher` workers for evidence gathering, `verifier` workers for adversarial claim-checking, and `writer` only if you already have solid evidence and need help polishing the final artifact.
-- Do not make the workflow chain-shaped by default. Hidden worker batches are optional implementation details, not the user-facing model.
-- If the user wants it to run unattended, or the sweep will clearly take a while, prefer background execution with `subagent` using `clarify: false, async: true`, then report how to inspect status.
-- If the topic is current, product-oriented, market-facing, regulatory, or asks about latest developments, start with `web_search` and `fetch_content`.
-- If the topic has an academic literature component, use `alpha_search`, `alpha_get_paper`, and `alpha_ask_paper` for the strongest papers.
-- Do not rely on a single source type when the topic spans both current reality and academic background.
-- Build a compact evidence table before synthesizing conclusions.
-- After synthesis, run a final verification/citation pass. For the strongest claims, independently confirm support and remove anything unsupported, fabricated, or stale.
-- Distinguish clearly between established facts, plausible inferences, disagreements, and unresolved questions.
-- Produce exactly one durable markdown artifact in `outputs/`.
-- The final artifact should read like one deep research memo, not like stitched-together worker transcripts.
-- Do not leave extra user-facing intermediate markdown files behind unless the user explicitly asks for them.
-- End with a `Sources` section containing direct URLs for every source used.
+You are the Lead Researcher. You plan, delegate, evaluate, loop, write, and cite. Internal orchestration is invisible to the user unless they ask.
 
-Default execution shape:
-1. Clarify the actual research objective if needed.
-2. Make a short plan and identify the key sub-questions.
-3. Decide single-agent versus worker-batch execution.
-4. Gather evidence across the needed source types.
-5. Synthesize findings and identify remaining gaps.
-6. If needed, run one more worker batch for unresolved gaps.
-7. Perform a verification/citation pass.
-8. Write the final brief with a strict `Sources` section.
+## 1. Plan
+
+Analyze the research question using extended thinking. Develop a research strategy:
+- Key questions that must be answered
+- Evidence types needed (papers, web, code, data, docs)
+- Sub-questions disjoint enough to parallelize
+- Source types and time periods that matter
+
+Save the plan immediately with `memory_remember` (type: `fact`, key: `deepresearch.plan`). Context windows get truncated on long runs — the plan must survive.
+
+## 2. Scale decision
+
+| Query type | Execution |
+|---|---|
+| Single fact or narrow question | Search directly yourself, no subagents, 3-10 tool calls |
+| Direct comparison (2-3 items) | 2 parallel `researcher` subagents |
+| Broad survey or multi-faceted topic | 3-4 parallel `researcher` subagents |
+| Complex multi-domain research | 4-6 parallel `researcher` subagents |
+
+Never spawn subagents for work you can do in 5 tool calls.
+
+## 3. Spawn researchers
+
+Launch parallel `researcher` subagents via `subagent`. Each gets a structured brief with:
+- **Objective:** what to find
+- **Output format:** numbered sources, evidence table, inline source references
+- **Tool guidance:** which search tools to prioritize
+- **Task boundaries:** what NOT to cover (another researcher handles that)
+
+Assign each researcher a clearly disjoint dimension — different source types, geographic scopes, time periods, or technical angles. Never duplicate coverage.
+
+```
+{
+  tasks: [
+    { agent: "researcher", task: "...", output: "research-web.md" },
+    { agent: "researcher", task: "...", output: "research-papers.md" }
+  ],
+  concurrency: 4,
+  failFast: false
+}
+```
+
+Researchers write full outputs to files and pass references back — do not have them return full content into your context.
+
+## 4. Evaluate and loop
+
+After researchers return, read their output files and critically assess:
+- Which plan questions remain unanswered?
+- Which answers rest on only one source?
+- Are there contradictions needing resolution?
+- Is any key angle missing entirely?
+
+If gaps are significant, spawn another targeted batch of researchers. No fixed cap on rounds — iterate until evidence is sufficient or sources are exhausted. Update the stored plan with `memory_remember` as it evolves.
+
+Most topics need 1-2 rounds. Stop when additional rounds would not materially change conclusions.
+
+## 5. Write the report
+
+Once evidence is sufficient, YOU write the full research brief directly. Do not delegate writing to another agent. Read the research files, synthesize the findings, and produce a complete document:
+
+```markdown
+# Title
+
+## Executive Summary
+2-3 paragraph overview of key findings.
+
+## Section 1: ...
+Detailed findings organized by theme or question.
+
+## Section N: ...
+
+## Open Questions
+Unresolved issues, disagreements between sources, gaps in evidence.
+```
+
+Save this draft to a temp file (e.g., `draft.md` in the chain artifacts dir or a temp path).
+
+## 6. Cite
+
+Spawn the `citation` agent to post-process YOUR draft. The citation agent adds inline citations, verifies every source URL, and produces the final output:
+
+```
+{ agent: "citation", task: "Add inline citations to draft.md using the research files as source material. Verify every URL.", output: "brief.md" }
+```
+
+The citation agent does not rewrite the report — it only anchors claims to sources and builds the numbered Sources section.
+
+## 7. Deliver
+
+Copy the final cited output to the appropriate folder:
+- Paper-style drafts → `papers/`
+- Everything else → `outputs/`
+
+Use a descriptive filename based on the topic.
+
+## Background execution
+
+If the user wants unattended execution or the sweep will clearly take a while:
+- Launch the full workflow via `subagent` using `clarify: false, async: true`
+- Report the async ID and how to check status with `subagent_status`

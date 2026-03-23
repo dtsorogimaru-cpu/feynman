@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 import {
@@ -18,7 +18,6 @@ export type PiRuntimeOptions = {
 	explicitModelSpec?: string;
 	oneShotPrompt?: string;
 	initialPrompt?: string;
-	systemPrompt: string;
 };
 
 export function resolvePiPaths(appRoot: string) {
@@ -27,8 +26,8 @@ export function resolvePiPaths(appRoot: string) {
 		piCliPath: resolve(appRoot, "node_modules", "@mariozechner", "pi-coding-agent", "dist", "cli.js"),
 		promisePolyfillPath: resolve(appRoot, "dist", "system", "promise-polyfill.js"),
 		researchToolsPath: resolve(appRoot, "extensions", "research-tools.ts"),
-		skillsPath: resolve(appRoot, "skills"),
 		promptTemplatePath: resolve(appRoot, "prompts"),
+		systemPromptPath: resolve(appRoot, ".pi", "SYSTEM.md"),
 		piWorkspaceNodeModulesPath: resolve(appRoot, ".pi", "npm", "node_modules"),
 	};
 }
@@ -40,7 +39,6 @@ export function validatePiInstallation(appRoot: string): string[] {
 	if (!existsSync(paths.piCliPath)) missing.push(paths.piCliPath);
 	if (!existsSync(paths.promisePolyfillPath)) missing.push(paths.promisePolyfillPath);
 	if (!existsSync(paths.researchToolsPath)) missing.push(paths.researchToolsPath);
-	if (!existsSync(paths.skillsPath)) missing.push(paths.skillsPath);
 	if (!existsSync(paths.promptTemplatePath)) missing.push(paths.promptTemplatePath);
 
 	return missing;
@@ -53,13 +51,13 @@ export function buildPiArgs(options: PiRuntimeOptions): string[] {
 		options.sessionDir,
 		"--extension",
 		paths.researchToolsPath,
-		"--skill",
-		paths.skillsPath,
 		"--prompt-template",
 		paths.promptTemplatePath,
-		"--system-prompt",
-		options.systemPrompt,
 	];
+
+	if (existsSync(paths.systemPromptPath)) {
+		args.push("--system-prompt", readFileSync(paths.systemPromptPath, "utf8"));
+	}
 
 	if (options.explicitModelSpec) {
 		args.push("--model", options.explicitModelSpec);
@@ -81,16 +79,13 @@ export function buildPiEnv(options: PiRuntimeOptions): NodeJS.ProcessEnv {
 
 	return {
 		...process.env,
-		PI_CODING_AGENT_DIR: options.feynmanAgentDir,
-		FEYNMAN_CODING_AGENT_DIR: options.feynmanAgentDir,
 		FEYNMAN_VERSION: options.feynmanVersion,
-		FEYNMAN_PI_NPM_ROOT: paths.piWorkspaceNodeModulesPath,
 		FEYNMAN_SESSION_DIR: options.sessionDir,
-		PI_SESSION_DIR: options.sessionDir,
 		FEYNMAN_MEMORY_DIR: resolve(dirname(options.feynmanAgentDir), "memory"),
 		FEYNMAN_NODE_EXECUTABLE: process.execPath,
 		FEYNMAN_BIN_PATH: resolve(options.appRoot, "bin", "feynman.js"),
 		PANDOC_PATH: process.env.PANDOC_PATH ?? resolveExecutable("pandoc", PANDOC_FALLBACK_PATHS),
+		PI_HARDWARE_CURSOR: process.env.PI_HARDWARE_CURSOR ?? "1",
 		PI_SKIP_VERSION_CHECK: process.env.PI_SKIP_VERSION_CHECK ?? "1",
 		MERMAID_CLI_PATH: process.env.MERMAID_CLI_PATH ?? resolveExecutable("mmdc", MERMAID_FALLBACK_PATHS),
 		PUPPETEER_EXECUTABLE_PATH:

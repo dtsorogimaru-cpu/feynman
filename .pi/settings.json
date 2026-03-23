@@ -1,6 +1,7 @@
 {
   "packages": [
     "npm:pi-subagents",
+    "npm:pi-btw",
     "npm:pi-docparser",
     "npm:pi-web-access",
     "npm:pi-markdown-preview",
@@ -11,7 +12,8 @@
     "npm:pi-zotero",
     "npm:@kaiserlich-dev/pi-session-search",
     "npm:pi-schedule-prompt",
-    "npm:@samfp/pi-memory"
+    "npm:@samfp/pi-memory",
+    "npm:@tmustier/pi-ralph-wiggum"
   ],
   "quietStartup": true,
   "collapseChangelog": true

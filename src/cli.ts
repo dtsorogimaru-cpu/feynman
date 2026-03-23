@@ -11,33 +11,26 @@ import {
 	login as loginAlpha,
 	logout as logoutAlpha,
 } from "@companion-ai/alpha-hub/lib";
-import { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
+import { AuthStorage, DefaultPackageManager, ModelRegistry, SettingsManager } from "@mariozechner/pi-coding-agent";
 
 import { syncBundledAssets } from "./bootstrap/sync.js";
-import { editConfig, printConfig, printConfigPath, printConfigValue, setConfigValue } from "./config/commands.js";
-import { getConfiguredSessionDir, loadFeynmanConfig } from "./config/feynman-config.js";
-import { ensureFeynmanHome, getFeynmanAgentDir, getFeynmanHome } from "./config/paths.js";
-import { buildFeynmanSystemPrompt } from "./feynman-prompt.js";
+import { ensureFeynmanHome, getDefaultSessionDir, getFeynmanAgentDir, getFeynmanHome } from "./config/paths.js";
 import { launchPiChat } from "./pi/launch.js";
 import { normalizeFeynmanSettings, normalizeThinkingLevel, parseModelSpec } from "./pi/settings.js";
 import {
 	loginModelProvider,
 	logoutModelProvider,
 	printModelList,
-	printModelProviders,
-	printModelRecommendation,
-	printModelStatus,
 	setDefaultModelSpec,
 } from "./model/commands.js";
-import { printSearchProviders, printSearchStatus, setSearchProvider } from "./search/commands.js";
+import { printSearchStatus } from "./search/commands.js";
 import { runDoctor, runStatus } from "./setup/doctor.js";
 import { setupPreviewDependencies } from "./setup/preview.js";
 import { runSetup } from "./setup/setup.js";
 import { printInfo, printPanel, printSection } from "./ui/terminal.js";
 
-const TOP_LEVEL_COMMANDS = new Set(["alpha", "chat", "config", "doctor", "help", "model", "search", "setup", "status"]);
+const TOP_LEVEL_COMMANDS = new Set(["alpha", "chat", "doctor", "help", "model", "search", "setup", "status", "update"]);
 const RESEARCH_WORKFLOW_COMMANDS = new Set([
-	"ablate",
 	"audit",
 	"autoresearch",
 	"compare",
@@ -46,11 +39,7 @@ const RESEARCH_WORKFLOW_COMMANDS = new Set([
 	"jobs",
 	"lit",
 	"log",
-	"memo",
-	"reading",
-	"related",
 	"replicate",
-	"rebuttal",
 	"review",
 	"watch",
 ]);
@@ -64,40 +53,32 @@ function printHelp(): void {
 	printSection("Getting Started");
 	printInfo("feynman");
 	printInfo("feynman setup");
-	printInfo("feynman setup quick");
 	printInfo("feynman doctor");
 	printInfo("feynman model");
-	printInfo("feynman search");
+	printInfo("feynman search status");
 
 	printSection("Commands");
 	printInfo("feynman chat [prompt]       Start chat explicitly, optionally with an initial prompt");
-	printInfo("feynman setup [section]     Run setup for model, alpha, web, preview, or all");
-	printInfo("feynman setup quick         Configure only missing items");
+	printInfo("feynman setup               Run the guided setup");
 	printInfo("feynman doctor              Diagnose config, auth, Pi runtime, and preview deps");
 	printInfo("feynman status              Show the current setup summary");
 	printInfo("feynman model list          Show available models in auth storage");
-	printInfo("feynman model providers     Show Pi-supported providers and auth state");
-	printInfo("feynman model recommend     Show the recommended research model");
 	printInfo("feynman model login [id]    Login to a Pi OAuth model provider");
 	printInfo("feynman model logout [id]   Logout from a Pi OAuth model provider");
 	printInfo("feynman model set <spec>    Set the default model");
-	printInfo("feynman search status       Show web research provider status");
-	printInfo("feynman search set <id>     Set web research provider");
-	printInfo("feynman config show         Print ~/.feynman/config.json");
-	printInfo("feynman config get <key>    Read a config value");
-	printInfo("feynman config set <key> <value>");
-	printInfo("feynman config edit         Open config in $EDITOR");
-	printInfo("feynman config path         Print the config path");
+	printInfo("feynman update [package]    Update installed packages (or a specific one)");
+	printInfo("feynman search status       Show Pi web-access status and config path");
 	printInfo("feynman alpha login|logout|status");
 
 	printSection("Research Workflows");
-	printInfo("feynman lit <topic>         Start the literature-review workflow");
-	printInfo("feynman review <artifact>   Start the peer-review workflow");
-	printInfo("feynman audit <item>        Start the paper/code audit workflow");
-	printInfo("feynman replicate <target>  Start the replication workflow");
-	printInfo("feynman memo <topic>        Start the research memo workflow");
-	printInfo("feynman draft <topic>       Start the paper-style draft workflow");
-	printInfo("feynman watch <topic>       Start the recurring research watch workflow");
+	printInfo("feynman deepresearch <topic>  Start a thorough source-heavy investigation");
+	printInfo("feynman lit <topic>           Start the literature-review workflow");
+	printInfo("feynman review <artifact>     Start the peer-review workflow");
+	printInfo("feynman audit <item>          Start the paper/code audit workflow");
+	printInfo("feynman replicate <target>    Start the replication workflow");
+	printInfo("feynman draft <topic>         Start the paper-style draft workflow");
+	printInfo("feynman compare <topic>       Start the source-comparison workflow");
+	printInfo("feynman watch <topic>         Start the recurring research watch workflow");
 
 	printSection("Legacy Flags");
 	printInfo('--prompt "<text>"           Run one prompt and exit');
@@ -148,71 +129,19 @@ async function handleAlphaCommand(action: string | undefined): Promise<void> {
 	throw new Error(`Unknown alpha command: ${action}`);
 }
 
-function handleConfigCommand(subcommand: string | undefined, args: string[]): void {
-	if (!subcommand || subcommand === "show") {
-		printConfig();
-		return;
-	}
-
-	if (subcommand === "path") {
-		printConfigPath();
-		return;
-	}
-
-	if (subcommand === "edit") {
-		editConfig();
-		return;
-	}
-
-	if (subcommand === "get") {
-		const key = args[0];
-		if (!key) {
-			throw new Error("Usage: feynman config get <key>");
-		}
-		printConfigValue(key);
-		return;
-	}
-
-	if (subcommand === "set") {
-		const [key, ...valueParts] = args;
-		if (!key || valueParts.length === 0) {
-			throw new Error("Usage: feynman config set <key> <value>");
-		}
-		setConfigValue(key, valueParts.join(" "));
-		return;
-	}
-
-	throw new Error(`Unknown config command: ${subcommand}`);
-}
-
-async function handleModelCommand(subcommand: string | undefined, args: string[], settingsPath: string, authPath: string): Promise<void> {
-	if (!subcommand || subcommand === "status" || subcommand === "current") {
-		printModelStatus(settingsPath, authPath);
-		return;
-	}
-
-	if (subcommand === "list") {
-		printModelList(settingsPath, authPath);
-		return;
-	}
-
-	if (subcommand === "providers") {
-		printModelProviders(settingsPath, authPath);
-		return;
-	}
-
-	if (subcommand === "recommend") {
-		printModelRecommendation(authPath);
+async function handleModelCommand(subcommand: string | undefined, args: string[], feynmanSettingsPath: string, feynmanAuthPath: string): Promise<void> {
+	if (!subcommand || subcommand === "list") {
+		printModelList(feynmanSettingsPath, feynmanAuthPath);
 		return;
 	}
 
 	if (subcommand === "login") {
-		await loginModelProvider(authPath, args[0]);
+		await loginModelProvider(feynmanAuthPath, args[0]);
 		return;
 	}
 
 	if (subcommand === "logout") {
-		await logoutModelProvider(authPath, args[0]);
+		await logoutModelProvider(feynmanAuthPath, args[0]);
 		return;
 	}
 
@@ -221,30 +150,39 @@ async function handleModelCommand(subcommand: string | undefined, args: string[]
 		if (!spec) {
 			throw new Error("Usage: feynman model set <provider/model>");
 		}
-		setDefaultModelSpec(settingsPath, authPath, spec);
+		setDefaultModelSpec(feynmanSettingsPath, feynmanAuthPath, spec);
 		return;
 	}
 
 	throw new Error(`Unknown model command: ${subcommand}`);
 }
 
-function handleSearchCommand(subcommand: string | undefined, args: string[]): void {
+async function handleUpdateCommand(workingDir: string, feynmanAgentDir: string, source?: string): Promise<void> {
+	const settingsManager = SettingsManager.create(workingDir, feynmanAgentDir);
+	const packageManager = new DefaultPackageManager({
+		cwd: workingDir,
+		agentDir: feynmanAgentDir,
+		settingsManager,
+	});
+
+	packageManager.setProgressCallback((event) => {
+		if (event.type === "start") {
+			console.log(`Updating ${event.source}...`);
+		} else if (event.type === "complete") {
+			console.log(`Updated ${event.source}`);
+		} else if (event.type === "error") {
+			console.error(`Failed to update ${event.source}: ${event.message ?? "unknown error"}`);
+		}
+	});
+
+	await packageManager.update(source);
+	await settingsManager.flush();
+	console.log("All packages up to date.");
+}
+
+function handleSearchCommand(subcommand: string | undefined): void {
 	if (!subcommand || subcommand === "status") {
 		printSearchStatus();
-		return;
-	}
-
-	if (subcommand === "providers" || subcommand === "list") {
-		printSearchProviders();
-		return;
-	}
-
-	if (subcommand === "set") {
-		const provider = args[0];
-		if (!provider) {
-			throw new Error("Usage: feynman search set <provider> [value]");
-		}
-		setSearchProvider(provider, args[1]);
 		return;
 	}
 
@@ -317,9 +255,8 @@ export async function main(): Promise<void> {
 		return;
 	}
 
-	const config = loadFeynmanConfig();
 	const workingDir = resolve(values.cwd ?? process.cwd());
-	const sessionDir = resolve(values["session-dir"] ?? getConfiguredSessionDir(config));
+	const sessionDir = resolve(values["session-dir"] ?? getDefaultSessionDir(feynmanHome));
 	const feynmanSettingsPath = resolve(feynmanAgentDir, "settings.json");
 	const feynmanAuthPath = resolve(feynmanAgentDir, "auth.json");
 	const thinkingLevel = normalizeThinkingLevel(values.thinking ?? process.env.FEYNMAN_THINKING) ?? "medium";
@@ -366,7 +303,6 @@ export async function main(): Promise<void> {
 
 	if (command === "setup") {
 		await runSetup({
-			section: rest[0],
 			settingsPath: feynmanSettingsPath,
 			bundledSettingsPath,
 			authPath: feynmanAuthPath,
@@ -400,18 +336,18 @@ export async function main(): Promise<void> {
 		return;
 	}
 
-	if (command === "config") {
-		handleConfigCommand(rest[0], rest.slice(1));
-		return;
-	}
-
 	if (command === "model") {
 		await handleModelCommand(rest[0], rest.slice(1), feynmanSettingsPath, feynmanAuthPath);
 		return;
 	}
 
 	if (command === "search") {
-		handleSearchCommand(rest[0], rest.slice(1));
+		handleSearchCommand(rest[0]);
+		return;
+	}
+
+	if (command === "update") {
+		await handleUpdateCommand(workingDir, feynmanAgentDir, rest[0]);
 		return;
 	}
 
@@ -439,6 +375,5 @@ export async function main(): Promise<void> {
 		explicitModelSpec,
 		oneShotPrompt: values.prompt,
 		initialPrompt: resolveInitialPrompt(command, rest, values.prompt),
-		systemPrompt: buildFeynmanSystemPrompt(),
 	});
 }

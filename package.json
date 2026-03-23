@@ -11,11 +11,11 @@
     "dist/",
     ".pi/agents/",
     ".pi/settings.json",
+    ".pi/SYSTEM.md",
     ".pi/themes/",
     "extensions/",
     "prompts/",
     "scripts/",
-    "skills/",
     "README.md",
     ".env.example"
   ],
@@ -37,9 +37,6 @@
   "pi": {
     "extensions": [
       "./extensions"
-    ],
-    "skills": [
-      "./skills"
     ],
     "prompts": [
       "./prompts"
