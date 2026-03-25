@@ -17,6 +17,8 @@
 curl -fsSL https://feynman.is/install | bash
 ```
 
+If you install via `pnpm` or `bun` instead of the standalone bundle, Feynman requires Node.js `20.18.1` or newer.
+
 ---
 
 ### What you type → what happens
@@ -92,7 +94,10 @@ Built on [Pi](https://github.com/badlogic/pi-mono) for the agent runtime, [alpha
 
 ```bash
 git clone https://github.com/getcompanion-ai/feynman.git
-cd feynman && pnpm install && pnpm start
+cd feynman
+nvm use || nvm install
+pnpm install
+pnpm start
 ```
 
 [Docs](https://feynman.is/docs) · [MIT License](LICENSE)

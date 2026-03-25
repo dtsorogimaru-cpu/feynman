@@ -160,6 +160,27 @@ require_command() {
   fi
 }
 
+warn_command_conflict() {
+  expected_path="$INSTALL_BIN_DIR/feynman"
+  resolved_path="$(command -v feynman 2>/dev/null || true)"
+
+  if [ -z "$resolved_path" ]; then
+    return
+  fi
+
+  if [ "$resolved_path" != "$expected_path" ]; then
+    step "Warning: current shell resolves feynman to $resolved_path"
+    step "Run now: export PATH=\"$INSTALL_BIN_DIR:\$PATH\" && hash -r && feynman"
+    step "Or launch directly: $expected_path"
+
+    case "$resolved_path" in
+      *"/node_modules/@companion-ai/feynman/"* | *"/node_modules/.bin/feynman")
+        step "If that path is an old global npm install, remove it with: npm uninstall -g @companion-ai/feynman"
+        ;;
+    esac
+  fi
+}
+
 resolve_release_metadata() {
   normalized_version="$(normalize_version "$VERSION")"
 
@@ -290,20 +311,22 @@ add_to_path
 case "$path_action" in
   added)
     step "PATH updated for future shells in $path_profile"
-    step "Run now: export PATH=\"$INSTALL_BIN_DIR:\$PATH\" && feynman"
+    step "Run now: export PATH=\"$INSTALL_BIN_DIR:\$PATH\" && hash -r && feynman"
     ;;
   configured)
     step "PATH is already configured for future shells in $path_profile"
-    step "Run now: export PATH=\"$INSTALL_BIN_DIR:\$PATH\" && feynman"
+    step "Run now: export PATH=\"$INSTALL_BIN_DIR:\$PATH\" && hash -r && feynman"
     ;;
   skipped)
     step "PATH update skipped"
-    step "Run now: export PATH=\"$INSTALL_BIN_DIR:\$PATH\" && feynman"
+    step "Run now: export PATH=\"$INSTALL_BIN_DIR:\$PATH\" && hash -r && feynman"
     ;;
   *)
     step "$INSTALL_BIN_DIR is already on PATH"
-    step "Run: feynman"
+    step "Run: hash -r && feynman"
     ;;
 esac
+
+warn_command_conflict
 
 printf 'Feynman %s installed successfully.\n' "$resolved_version"

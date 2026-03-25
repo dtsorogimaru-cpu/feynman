@@ -1,6 +1,7 @@
 import type { PackageSource } from "@mariozechner/pi-coding-agent";
 
 export const CORE_PACKAGE_SOURCES = [
+	"npm:@companion-ai/alpha-hub",
 	"npm:pi-subagents",
 	"npm:pi-btw",
 	"npm:pi-docparser",

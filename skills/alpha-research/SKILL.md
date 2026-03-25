@@ -11,7 +11,7 @@ Use the `alpha` CLI via bash for all paper research operations.
 
 | Command | Description |
 |---------|-------------|
-| `alpha search "<query>"` | Search papers. Modes: `--mode semantic`, `--mode keyword`, `--mode agentic` |
+| `alpha search "<query>"` | Search papers. Prefer `--mode semantic` by default; use `--mode keyword` only for exact-term lookup and `--mode agentic` for broader retrieval. |
 | `alpha get <arxiv-id-or-url>` | Fetch paper content and any local annotation |
 | `alpha get --full-text <arxiv-id>` | Get raw full text instead of AI report |
 | `alpha ask <arxiv-id> "<question>"` | Ask a question about a paper's PDF |
@@ -22,7 +22,7 @@ Use the `alpha` CLI via bash for all paper research operations.
 
 ## Auth
 
-Run `alpha login` to authenticate with alphaXiv. Check status with `alpha status`.
+Run `alpha login` to authenticate with alphaXiv. Check status with `feynman alpha status`, or `alpha status` once your installed `alpha-hub` version includes it.
 
 ## Examples
 

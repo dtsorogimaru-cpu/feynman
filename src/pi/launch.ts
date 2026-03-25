@@ -2,8 +2,11 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 
 import { buildPiArgs, buildPiEnv, type PiRuntimeOptions, resolvePiPaths } from "./runtime.js";
+import { ensureSupportedNodeVersion } from "../system/node-version.js";
 
 export async function launchPiChat(options: PiRuntimeOptions): Promise<void> {
+	ensureSupportedNodeVersion();
+
 	const { piCliPath, promisePolyfillPath } = resolvePiPaths(options.appRoot);
 	if (!existsSync(piCliPath)) {
 		throw new Error(`Pi CLI not found: ${piCliPath}`);

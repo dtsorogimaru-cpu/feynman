@@ -1,8 +1,25 @@
 #!/usr/bin/env node
-const v = process.versions.node.split(".").map(Number);
-if (v[0] < 20) {
-  console.error(`feynman requires Node.js 20 or later (you have ${process.versions.node})`);
-  console.error("upgrade: https://nodejs.org or nvm install 20");
+const MIN_NODE_VERSION = "20.18.1";
+
+function parseNodeVersion(version) {
+  const [major = "0", minor = "0", patch = "0"] = version.replace(/^v/, "").split(".");
+  return {
+    major: Number.parseInt(major, 10) || 0,
+    minor: Number.parseInt(minor, 10) || 0,
+    patch: Number.parseInt(patch, 10) || 0,
+  };
+}
+
+function compareNodeVersions(left, right) {
+  if (left.major !== right.major) return left.major - right.major;
+  if (left.minor !== right.minor) return left.minor - right.minor;
+  return left.patch - right.patch;
+}
+
+if (compareNodeVersions(parseNodeVersion(process.versions.node), parseNodeVersion(MIN_NODE_VERSION)) < 0) {
+  console.error(`feynman requires Node.js ${MIN_NODE_VERSION} or later (detected ${process.versions.node}).`);
+  console.error("Switch to Node 20 with `nvm install 20 && nvm use 20`, or use the standalone installer:");
+  console.error("curl -fsSL https://feynman.is/install | bash");
   process.exit(1);
 }
 await import("../scripts/patch-embedded-pi.mjs");

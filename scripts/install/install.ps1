@@ -146,6 +146,16 @@ Workarounds:
     Write-Host "$installBinDir is already on PATH."
   }
 
+  $resolvedCommand = Get-Command feynman -ErrorAction SilentlyContinue
+  if ($resolvedCommand -and $resolvedCommand.Source -ne $shimPath) {
+    Write-Warning "Current shell resolves feynman to $($resolvedCommand.Source)"
+    Write-Host "Run in a new shell, or run: `$env:Path = '$installBinDir;' + `$env:Path"
+    Write-Host "Then run: feynman"
+    if ($resolvedCommand.Source -like "*node_modules*@companion-ai*feynman*") {
+      Write-Host "If that path is an old global npm install, remove it with: npm uninstall -g @companion-ai/feynman"
+    }
+  }
+
   Write-Host "Feynman $resolvedVersion installed successfully."
 } finally {
   if (Test-Path $tmpDir) {

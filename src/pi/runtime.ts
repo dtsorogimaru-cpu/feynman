@@ -79,7 +79,8 @@ export function buildPiEnv(options: PiRuntimeOptions): NodeJS.ProcessEnv {
 	const paths = resolvePiPaths(options.appRoot);
 
 	const currentPath = process.env.PATH ?? "";
-	const binPath = paths.nodeModulesBinPath;
+	const binEntries = [paths.nodeModulesBinPath, resolve(paths.piWorkspaceNodeModulesPath, ".bin")];
+	const binPath = binEntries.join(":");
 
 	return {
 		...process.env,
