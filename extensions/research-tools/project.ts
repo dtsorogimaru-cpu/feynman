@@ -1,14 +1,70 @@
-import { mkdir, stat, writeFile } from "node:fs/promises";
-import { dirname, resolve as resolvePath } from "node:path";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { join, relative, resolve as resolvePath } from "node:path";
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Type } from "@sinclair/typebox";
 
 import { getExtensionCommandSpec } from "../../metadata/commands.mjs";
-import { renderHtmlPreview, renderPdfPreview, openWithDefaultApp, pathExists } from "./preview.js";
 import { buildProjectAgentsTemplate, buildSessionLogsReadme } from "./project-scaffold.js";
-import { formatToolText } from "./shared.js";
-import { searchSessionTranscripts } from "./session-search.js";
+
+async function pathExists(path: string): Promise<boolean> {
+	try {
+		await stat(path);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+const ARTIFACT_DIRS = ["papers", "outputs", "experiments", "notes"];
+const ARTIFACT_EXTS = new Set([".md", ".tex", ".pdf", ".py", ".csv", ".json", ".html", ".txt", ".log"]);
+
+async function collectArtifacts(cwd: string): Promise<{ label: string; path: string }[]> {
+	const items: { label: string; path: string; mtime: number }[] = [];
+
+	for (const dir of ARTIFACT_DIRS) {
+		const dirPath = resolvePath(cwd, dir);
+		if (!(await pathExists(dirPath))) continue;
+
+		const walk = async (current: string): Promise<void> => {
+			let entries;
+			try {
+				entries = await readdir(current, { withFileTypes: true });
+			} catch {
+				return;
+			}
+			for (const entry of entries) {
+				const full = join(current, entry.name);
+				if (entry.isDirectory()) {
+					await walk(full);
+				} else if (ARTIFACT_EXTS.has(entry.name.slice(entry.name.lastIndexOf(".")))) {
+					const rel = relative(cwd, full);
+					let title = "";
+					try {
+						const head = await readFile(full, "utf8").then((c) => c.slice(0, 200));
+						const match = head.match(/^#\s+(.+)/m);
+						if (match) title = match[1]!.trim();
+					} catch {}
+					const info = await stat(full).catch(() => null);
+					const mtime = info?.mtimeMs ?? 0;
+					const size = info ? formatSize(info.size) : "";
+					const titlePart = title ? ` — ${title}` : "";
+					items.push({ label: `${rel}${titlePart}  (${size})`, path: rel, mtime });
+				}
+			}
+		};
+
+		await walk(dirPath);
+	}
+
+	items.sort((a, b) => b.mtime - a.mtime);
+	return items;
+}
+
+function formatSize(bytes: number): string {
+	if (bytes < 1024) return `${bytes}B`;
+	if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
 
 export function registerInitCommand(pi: ExtensionAPI): void {
 	pi.registerCommand("init", {
@@ -45,73 +101,23 @@ export function registerInitCommand(pi: ExtensionAPI): void {
 	});
 }
 
-export function registerSessionSearchTool(pi: ExtensionAPI): void {
-	pi.registerTool({
-		name: "session_search",
-		label: "Session Search",
-		description: "Search prior Feynman session transcripts to recover what was done, said, or written before.",
-		parameters: Type.Object({
-			query: Type.String({
-				description: "Search query to look for in past sessions.",
-			}),
-			limit: Type.Optional(
-				Type.Number({
-					description: "Maximum number of sessions to return. Defaults to 3.",
-				}),
-			),
-		}),
-		async execute(_toolCallId, params) {
-			const result = await searchSessionTranscripts(params.query, Math.max(1, Math.min(params.limit ?? 3, 8)));
-			return {
-				content: [{ type: "text", text: formatToolText(result) }],
-				details: result,
-			};
-		},
-	});
-}
-
-export function registerPreviewTool(pi: ExtensionAPI): void {
-	pi.registerTool({
-		name: "preview_file",
-		label: "Preview File",
-		description: "Open a markdown, LaTeX, PDF, or code artifact in the browser or a PDF viewer for human review. Rendered HTML/PDF previews are temporary and do not replace the source artifact.",
-		parameters: Type.Object({
-			path: Type.String({
-				description: "Path to the file to preview.",
-			}),
-			target: Type.Optional(
-				Type.String({
-					description: "Preview target: browser or pdf. Defaults to browser.",
-				}),
-			),
-		}),
-		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const target = (params.target?.trim().toLowerCase() || "browser");
-			if (target !== "browser" && target !== "pdf") {
-				throw new Error("target must be browser or pdf");
+export function registerOutputsCommand(pi: ExtensionAPI): void {
+	pi.registerCommand("outputs", {
+		description: "Browse all research artifacts (papers, outputs, experiments, notes).",
+		handler: async (_args, ctx) => {
+			const items = await collectArtifacts(ctx.cwd);
+			if (items.length === 0) {
+				ctx.ui.notify("No artifacts found. Use /lit, /draft, /review, or /deepresearch to create some.", "info");
+				return;
 			}
 
-			const resolvedPath = resolvePath(ctx.cwd, params.path);
-			const openedPath =
-				resolvePath(resolvedPath).toLowerCase().endsWith(".pdf") && target === "pdf"
-					? resolvedPath
-					: target === "pdf"
-						? await renderPdfPreview(resolvedPath)
-						: await renderHtmlPreview(resolvedPath);
+			const selected = await ctx.ui.select(`Artifacts (${items.length})`, items.map((i) => i.label));
+			if (!selected) return;
 
-			await mkdir(dirname(openedPath), { recursive: true }).catch(() => {});
-			await openWithDefaultApp(openedPath);
-
-			const result = {
-				sourcePath: resolvedPath,
-				target,
-				openedPath,
-				temporaryPreview: openedPath !== resolvedPath,
-			};
-			return {
-				content: [{ type: "text", text: formatToolText(result) }],
-				details: result,
-			};
+			const match = items.find((i) => i.label === selected);
+			if (match) {
+				ctx.ui.setEditorText(`read ${match.path}`);
+			}
 		},
 	});
 }

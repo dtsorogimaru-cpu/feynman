@@ -14,6 +14,8 @@ Design a replication plan for: $@
    - **Local** — run in the current working directory
    - **Virtual environment** — create an isolated venv/conda env first
    - **Docker** — run experiment code inside an isolated Docker container
+   - **Modal** — run on Modal's serverless GPU infrastructure. Write a Modal-decorated Python script and execute with `modal run <script.py>`. Best for burst GPU jobs that don't need persistent state. Requires `modal` CLI (`pip install modal && modal setup`).
+   - **RunPod** — provision a GPU pod on RunPod and SSH in for execution. Use `runpodctl` to create pods, transfer files, and manage lifecycle. Best for long-running experiments or when you need SSH access and persistent storage. Requires `runpodctl` CLI and `RUNPOD_API_KEY`.
    - **Plan only** — produce the replication plan without executing
 4. **Execute** — If the user chose an execution environment, implement and run the replication steps there. Save notes, scripts, raw outputs, and results to disk in a reproducible layout. Do not call the outcome replicated unless the planned checks actually passed.
 5. **Log** — For multi-step or resumable replication work, append concise entries to `CHANGELOG.md` after meaningful progress, failed attempts, major verification outcomes, and before stopping. Record the active objective, what changed, what was checked, and the next step.

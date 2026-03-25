@@ -31,20 +31,11 @@ These are the primary commands you will use day-to-day. Each workflow dispatches
 | `/jobs` | Inspect active background work: running processes, scheduled follow-ups, and active watches |
 | `/help` | Show grouped Feynman commands and prefill the editor with a selected command |
 | `/init` | Bootstrap `AGENTS.md` and session-log folders for a new research project |
+| `/outputs` | Browse all research artifacts (papers, outputs, experiments, notes) |
 | `/search` | Search prior session transcripts for past research and findings |
 | `/preview` | Preview the current artifact as rendered HTML or PDF |
 
 Session management commands help you organize ongoing work. The `/log` command is particularly useful at the end of a research session to capture what was accomplished and what remains.
-
-## Setup commands
-
-| Command | Description |
-| --- | --- |
-| `/alpha-login` | Sign in to alphaXiv from inside the REPL |
-| `/alpha-status` | Show alphaXiv authentication status |
-| `/alpha-logout` | Clear alphaXiv auth from inside the REPL |
-
-These provide a convenient way to manage alphaXiv authentication without leaving the REPL.
 
 ## Running workflows from the CLI
 

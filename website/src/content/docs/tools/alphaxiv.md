@@ -21,27 +21,32 @@ Check your authentication status:
 feynman alpha status
 ```
 
-You can also manage AlphaXiv auth from inside the REPL with `/alpha-login`, `/alpha-status`, and `/alpha-logout`.
-
 ## What it provides
 
 AlphaXiv gives Feynman access to several capabilities that power the research workflows:
 
-- **Paper search** -- Find papers by topic, author, keyword, or arXiv ID
-- **Full-text retrieval** -- Download and parse complete PDFs for in-depth reading
-- **Citation metadata** -- Access citation counts, references, and citation chains
-- **Discussion threads** -- Read community discussions and annotations on papers
-- **Related papers** -- Discover connected work through citation graphs and recommendations
+- **Paper search** -- Find papers by topic, author, keyword, or arXiv ID (`alpha search`)
+- **Full-text retrieval** -- Download and parse complete PDFs for in-depth reading (`alpha get`)
+- **Paper Q&A** -- Ask targeted questions about a paper's content (`alpha ask`)
+- **Code inspection** -- Read files from a paper's linked GitHub repository (`alpha code`)
+- **Annotations** -- Persistent local notes on papers across sessions (`alpha annotate`)
 
 ## How it is used
 
-You do not invoke AlphaXiv directly in most cases. The researcher agent uses it automatically during workflows like deep research, literature review, and peer review. When you provide an arXiv ID (like `arxiv:2401.12345`), Feynman fetches the paper through AlphaXiv.
+Feynman ships an `alpha-research` skill that teaches the agent to use the `alpha` CLI for paper operations. The researcher agent uses it automatically during workflows like deep research, literature review, and peer review. When you provide an arXiv ID (like `2401.12345`), the agent fetches the paper via `alpha get`.
 
-AlphaXiv search is especially powerful when combined with citation chaining. The researcher agent can follow references from a relevant paper to discover foundational work, then follow forward citations to find papers that built on it. This produces a much more complete picture than keyword search alone.
+You can also use the `alpha` CLI directly from the terminal:
+
+```bash
+alpha search "scaling laws"
+alpha get 2401.12345
+alpha ask 2401.12345 "What optimizer did they use?"
+alpha code https://github.com/org/repo src/model.py
+```
 
 ## Configuration
 
-AlphaXiv configuration is managed through the CLI commands listed above. Authentication tokens are stored in `~/.feynman/auth/` and persist across sessions. No additional configuration is needed beyond logging in.
+Authentication tokens are stored in `~/.feynman/auth/` and persist across sessions. No additional configuration is needed beyond logging in.
 
 ## Without AlphaXiv
 

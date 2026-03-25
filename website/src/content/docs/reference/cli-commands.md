@@ -37,7 +37,7 @@ These commands manage your model provider configuration. The `model set` command
 | `feynman alpha logout` | Clear alphaXiv auth |
 | `feynman alpha status` | Check alphaXiv auth status |
 
-AlphaXiv authentication enables Feynman to search and retrieve papers, access discussion threads, and pull citation metadata. You can also manage AlphaXiv auth from inside the REPL with `/alpha-login`, `/alpha-status`, and `/alpha-logout`.
+AlphaXiv authentication enables Feynman to search and retrieve papers, access discussion threads, and pull citation metadata. The `alpha` CLI is also available directly in the agent shell for paper search, Q&A, and code inspection.
 
 ## Package management
 

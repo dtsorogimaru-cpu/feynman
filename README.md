@@ -62,6 +62,7 @@ Ask naturally or use slash commands as shortcuts.
 | `/draft <topic>` | Paper-style draft from research findings |
 | `/autoresearch <idea>` | Autonomous experiment loop |
 | `/watch <topic>` | Recurring research watch |
+| `/outputs` | Browse all research artifacts |
 
 ---
 
@@ -76,19 +77,21 @@ Four bundled research agents, dispatched automatically.
 
 ---
 
-### Tools
+### Skills & Tools
 
-- **[AlphaXiv](https://www.alphaxiv.org/)** — paper search, Q&A, code reading, persistent annotations
+- **[AlphaXiv](https://www.alphaxiv.org/)** — paper search, Q&A, code reading, annotations (via `alpha` CLI)
 - **Docker** — isolated container execution for safe experiments on your machine
 - **Web search** — Gemini or Perplexity, zero-config default
 - **Session search** — indexed recall across prior research sessions
 - **Preview** — browser and PDF export of generated artifacts
+- **Modal** — serverless GPU compute for burst training and inference
+- **RunPod** — persistent GPU pods with SSH access for long-running experiments
 
 ---
 
 ### How it works
 
-Built on [Pi](https://github.com/badlogic/pi-mono) for the agent runtime, [alphaXiv](https://www.alphaxiv.org/) for paper search and analysis, and [Docker](https://www.docker.com/) for isolated local execution. Every output is source-grounded — claims link to papers, docs, or repos with direct URLs.
+Built on [Pi](https://github.com/badlogic/pi-mono) for the agent runtime, [alphaXiv](https://www.alphaxiv.org/) for paper search and analysis, and CLI tools for compute and execution. Capabilities are delivered as [Pi skills](https://github.com/badlogic/pi-skills) — Markdown instruction files synced to `~/.feynman/agent/skills/` on startup. Every output is source-grounded — claims link to papers, docs, or repos with direct URLs.
 
 ---
 

@@ -29,6 +29,7 @@ export function resolvePiPaths(appRoot: string) {
 		promptTemplatePath: resolve(appRoot, "prompts"),
 		systemPromptPath: resolve(appRoot, ".feynman", "SYSTEM.md"),
 		piWorkspaceNodeModulesPath: resolve(appRoot, ".feynman", "npm", "node_modules"),
+		nodeModulesBinPath: resolve(appRoot, "node_modules", ".bin"),
 	};
 }
 
@@ -77,8 +78,12 @@ export function buildPiArgs(options: PiRuntimeOptions): string[] {
 export function buildPiEnv(options: PiRuntimeOptions): NodeJS.ProcessEnv {
 	const paths = resolvePiPaths(options.appRoot);
 
+	const currentPath = process.env.PATH ?? "";
+	const binPath = paths.nodeModulesBinPath;
+
 	return {
 		...process.env,
+		PATH: `${binPath}:${currentPath}`,
 		FEYNMAN_VERSION: options.feynmanVersion,
 		FEYNMAN_SESSION_DIR: options.sessionDir,
 		FEYNMAN_MEMORY_DIR: resolve(dirname(options.feynmanAgentDir), "memory"),
