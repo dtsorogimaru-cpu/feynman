@@ -2,7 +2,6 @@
 import Layout from "@/layouts/main.astro"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
-import { Star } from "lucide-react"
 
 const workflows = [
   { command: "/deepresearch", description: "Multi-agent investigation across papers, web, and code" },
@@ -68,7 +67,6 @@ const installCommands = [
                   : "border-border bg-background text-muted-foreground hover:text-foreground",
               ]}
               data-command={entry.command}
-              data-label={entry.label}
               aria-label={`Show ${entry.label} install command`}
             >
               {entry.label}
@@ -82,12 +80,9 @@ const installCommands = [
           data-command={installCommands[0].command}
           aria-label="Copy install command"
         >
-          <div class="flex min-w-0 flex-col">
-            <span id="install-label" class="text-xs uppercase tracking-[0.2em] text-muted-foreground">{installCommands[0].label}</span>
-            <span id="install-command" class="truncate">{installCommands[0].command}</span>
-          </div>
-          <span id="install-copy" class="shrink-0 text-muted-foreground transition-colors group-hover:text-foreground">Copy</span>
-          <span id="install-check" class="hidden shrink-0 text-primary">Copied</span>
+          <span id="install-command" class="min-w-0 truncate">{installCommands[0].command}</span>
+          <svg id="install-copy" class="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <svg id="install-check" class="hidden size-4 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
         </button>
 
         <div class="flex items-center gap-3">
@@ -96,10 +91,6 @@ const installCommands = [
           </a>
           <a href="https://github.com/getcompanion-ai/feynman" target="_blank" rel="noopener noreferrer" class="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
             GitHub
-            <span id="star-badge" class="hidden inline-flex items-center gap-1 text-muted-foreground">
-              <span id="star-count"></span>
-              <Star client:load size={14} fill="currentColor" />
-            </span>
           </a>
         </div>
       </div>
@@ -230,7 +221,6 @@ const installCommands = [
     var toggles = Array.from(document.querySelectorAll(".install-toggle"))
     var commandBtn = document.getElementById("install-cmd")
     var commandText = document.getElementById("install-command")
-    var commandLabel = document.getElementById("install-label")
     var copyLabel = document.getElementById("install-copy")
     var checkLabel = document.getElementById("install-check")
 
@@ -239,11 +229,9 @@ const installCommands = [
       toggle._toggleBound = true
       toggle.addEventListener("click", function () {
         var command = toggle.getAttribute("data-command")
-        var label = toggle.getAttribute("data-label")
-        if (!commandBtn || !commandText || !commandLabel || !command || !label) return
+        if (!commandBtn || !commandText || !command) return
         commandBtn.setAttribute("data-command", command)
         commandText.textContent = command
-        commandLabel.textContent = label
         toggles.forEach(function (item) {
           item.classList.remove("border-foreground", "bg-foreground", "text-background")
           item.classList.add("border-border", "bg-background", "text-muted-foreground")
@@ -272,21 +260,4 @@ const installCommands = [
   }
   initCopyBtn()
   document.addEventListener("astro:after-swap", initCopyBtn)
-
-  function fetchStars() {
-    var el = document.getElementById("star-count")
-    if (!el) return
-    fetch("https://api.github.com/repos/getcompanion-ai/feynman")
-      .then(function(r) { return r.json() })
-      .then(function(d) {
-        if (d.stargazers_count !== undefined) {
-          el.textContent = d.stargazers_count >= 1000 ? (d.stargazers_count / 1000).toFixed(1) + "k" : String(d.stargazers_count)
-          var badge = document.getElementById("star-badge")
-          if (badge) badge.classList.remove("hidden")
-        }
-      })
-      .catch(function() {})
-  }
-  fetchStars()
-  document.addEventListener("astro:after-swap", fetchStars)
 </script>
