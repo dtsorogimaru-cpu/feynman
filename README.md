@@ -82,9 +82,6 @@ $ feynman audit 2401.12345
 
 $ feynman replicate "chain-of-thought improves math"
 → Replicates experiments on local or cloud GPUs
-
-$ feynman valichord "study-id-or-topic"
-→ Runs the ValiChord reproducibility workflow or checks existing Harmony Records
 ```
 
 ---
@@ -100,7 +97,6 @@ Ask naturally or use slash commands as shortcuts.
 | `/review <artifact>` | Simulated peer review with severity and revision plan |
 | `/audit <item>` | Paper vs. codebase mismatch audit |
 | `/replicate <paper>` | Replicate experiments on local or cloud GPUs |
-| `/valichord <study-or-topic>` | Reproducibility attestation workflow and Harmony Record lookup |
 | `/compare <topic>` | Source comparison matrix |
 | `/draft <topic>` | Paper-style draft from research findings |
 | `/autoresearch <idea>` | Autonomous experiment loop |
