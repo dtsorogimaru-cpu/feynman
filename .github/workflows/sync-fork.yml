@@ -2,7 +2,7 @@ name: Sync fork
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "0 3 * * *" # วันละครั้ง ตอน 03:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -11,15 +11,44 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Sync with upstream
-        run: |
-          git remote add upstream "$(gh repo view --json parent --jq '.parent.url')"
-          git fetch upstream
-          git checkout main
-          git merge upstream/main --no-edit
-          git push origin main
+      - name: Sync fork safely
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -u
+
+          BRANCH="${GITHUB_REF_NAME}"
+          echo "Current branch: $BRANCH"
+
+          UPSTREAM_URL="$(gh repo view --json parent --jq '.parent.url // empty')"
+
+          if [ -z "$UPSTREAM_URL" ]; then
+            echo "This repo is not a fork. Skipping."
+            exit 0
+          fi
+
+          echo "Upstream: $UPSTREAM_URL"
+
+          git remote add upstream "$UPSTREAM_URL" || true
+          git fetch upstream
+
+          if ! git ls-remote --exit-code --heads upstream "$BRANCH" >/dev/null 2>&1; then
+            echo "Upstream branch '$BRANCH' not found. Skipping."
+            exit 0
+          fi
+
+          git checkout "$BRANCH"
+
+          if git merge --ff-only "upstream/$BRANCH"; then
+            echo "Fast-forward sync successful."
+            git push origin "$BRANCH"
+          else
+            echo "Cannot fast-forward, probably diverged or conflict. Skipping."
+            exit 0
+          fi
